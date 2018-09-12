@@ -33,11 +33,9 @@
 }
 
 - (NewsTableViewCell *)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)indexPath {
-    
     static NSString *CellIdentifier = @"newsCell";
     NewsTableViewCell *cell = [tableView dequeueReusableCellWithIdentifier:CellIdentifier forIndexPath:indexPath];
     NSDictionary *newsItem = self.newsArray[indexPath.row];
-    
     
     cell.newsTitle.text = [NSString stringWithFormat:@"%@",newsItem[@"title"]];
     cell.newsTitle.font = [UIFont fontWithName:@"Arial" size:15];

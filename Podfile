@@ -9,4 +9,5 @@ target 'MyStore' do
 
   pod 'Mantle'
   pod 'SDWebImage'
+  pod 'AFNetworking'
 end

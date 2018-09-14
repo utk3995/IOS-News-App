@@ -19,6 +19,7 @@
 @property (weak, nonatomic) IBOutlet NewsTableView *newsTableView;
 @property (weak, nonatomic) IBOutlet UIScrollView *catagoryScrollView;
 @property (nonatomic) NSURL *apiURL;
+@property (atomic) BOOL networkPresent;
 
 @end
 
@@ -28,12 +29,22 @@
     [super viewDidLoad];
     _newsTableView.rowHeight = 70;
     self.apiURL = [NSURL URLWithString:@"https://newsapi.org/v2/top-headlines?country=in&apiKey=e12b38aab6f546b78700191506122030"];
-    [self fetchNews];
+    [self moniterNetworkPresenceAndFetchNews];
 }
 
-- (void)didReceiveMemoryWarning {
-    [super didReceiveMemoryWarning];
-    // Dispose of any resources that can be recreated.
+- (void) moniterNetworkPresenceAndFetchNews {
+    [[AFNetworkReachabilityManager sharedManager] startMonitoring];
+    [[AFNetworkReachabilityManager sharedManager] setReachabilityStatusChangeBlock:^(AFNetworkReachabilityStatus status){
+        if (![[AFNetworkReachabilityManager sharedManager] isReachable]) {
+            NSLog(@"Internet not found");
+            [self displayNoNetworkToast];
+            self.networkPresent = NO;
+        } else {
+            NSLog(@"Internet found");
+            self.networkPresent = YES;
+        }
+        [self fetchNews];
+    }];
 }
 
 - (IBAction)searchAction:(UIButton *)sender {
@@ -48,30 +59,21 @@
 
 - (IBAction)selectCatagory:(UIButton *)sender {
     NSLog(@"Button pressed : %ld",(long)sender.tag);
-    [[AFNetworkReachabilityManager sharedManager] startMonitoring];
-    [[AFNetworkReachabilityManager sharedManager] setReachabilityStatusChangeBlock:^(AFNetworkReachabilityStatus status){
-        if (![[AFNetworkReachabilityManager sharedManager] isReachable]) {
-            NSLog(@"Internet not found");
-            [self displayNoNetworkToast];
-        } else {
-            NSLog(@"Internet found");
-            switch (sender.tag) {
-                case 1:
-                    self.apiURL = [NSURL URLWithString:@"https://newsapi.org/v2/top-headlines?country=in&apiKey=e12b38aab6f546b78700191506122030"];
-                    break;
-                case 2:
-                    self.apiURL = [NSURL URLWithString: [NSString stringWithFormat:@"https://newsapi.org/v2/top-headlines?sources=new-scientist&sortBy=publishedAt&apiKey=e12b38aab6f546b78700191506122030"]];
-                    break;
-                case 3:
-                    self.apiURL = [NSURL URLWithString: [NSString stringWithFormat:@"https://newsapi.org/v2/top-headlines?sources=financial-times&sortBy=publishedAt&apiKey=e12b38aab6f546b78700191506122030"]];
-                    break;
-                case 4:
-                    self.apiURL = [NSURL URLWithString: [NSString stringWithFormat:@"https://newsapi.org/v2/top-headlines?sources=espn&sortBy=publishedAt&apiKey=e12b38aab6f546b78700191506122030"]];
-                    break;
-            }
-            [self fetchNews];
-        }
-    }];
+    switch (sender.tag) {
+        case 1:
+            self.apiURL = [NSURL URLWithString:@"https://newsapi.org/v2/top-headlines?country=in&apiKey=e12b38aab6f546b78700191506122030"];
+            break;
+        case 2:
+            self.apiURL = [NSURL URLWithString: [NSString stringWithFormat:@"https://newsapi.org/v2/top-headlines?sources=new-scientist&sortBy=publishedAt&apiKey=e12b38aab6f546b78700191506122030"]];
+            break;
+        case 3:
+            self.apiURL = [NSURL URLWithString: [NSString stringWithFormat:@"https://newsapi.org/v2/top-headlines?sources=financial-times&sortBy=publishedAt&apiKey=e12b38aab6f546b78700191506122030"]];
+            break;
+        case 4:
+            self.apiURL = [NSURL URLWithString: [NSString stringWithFormat:@"https://newsapi.org/v2/top-headlines?sources=espn&sortBy=publishedAt&apiKey=e12b38aab6f546b78700191506122030"]];
+            break;
+    }
+    [self fetchNews];
 }
 
 -(void) displayNoNetworkToast {
@@ -81,13 +83,23 @@
                                                                    message:message
                                                             preferredStyle:UIAlertControllerStyleAlert];
     [self presentViewController:alert animated:YES completion:nil];
-    int duration = 4; // duration in seconds
+    int duration = 3; // duration in seconds
     dispatch_after(dispatch_time(DISPATCH_TIME_NOW, duration * NSEC_PER_SEC), dispatch_get_main_queue(), ^{
         [alert dismissViewControllerAnimated:YES completion:nil];
     });
 }
 
 - (void) fetchNews {
+    if (!self.networkPresent) {
+        NSLog(@"Internet not found");
+        [self fetchNewsFromCoreData];
+    } else {
+        NSLog(@"Internet found");
+        [self fetchNewsFromAPI];
+    }
+}
+
+- (void) fetchNewsFromAPI {
     NSURL *url = self.apiURL;
     NSData *jsonResultsForNews = [NSData dataWithContentsOfURL:url];
     NSDictionary *jsonDictionaryForNews = [NSJSONSerialization JSONObjectWithData:jsonResultsForNews options:0 error:NULL];
@@ -99,6 +111,10 @@
     } else {
         NSLog(@"Fetch Unsuccessful.");
     }
+}
+
+- (void) fetchNewsFromCoreData {
+    
 }
 
 - (BOOL) checkForSuccessInDictionary: (NSDictionary *) jsonDictionary {
@@ -135,7 +151,7 @@
 //    }
 //    return context;
 //}
-//
+
 //- (void) saveIntoCoreData:(NSArray *)articleArray {
 //    NSManagedObjectContext *context = [self managedObjectContext];
 //
@@ -146,16 +162,6 @@
 //    // Save the object to persistent store
 //    if (![context save:&error]) {
 //        NSLog(@"Can't Save! %@ %@", error, [error localizedDescription]);
-//    }
-//}
-
-//- (void) addLabelsToCatagoryScrollView {
-//    NSArray *catagoryLabels = @[@"sports",@"general",@"technology",@"science",@"business"];
-//    for (int i = 0; i<[catagoryLabels count]; i++) {
-//        UILabel *label = [[UILabel alloc] init];
-//        label.text = catagoryLabels[i];
-//        [self.catagoryScrollView addSubview:label];
-//        NSLog(@"added %@",catagoryLabels[i]);
 //    }
 //}
 

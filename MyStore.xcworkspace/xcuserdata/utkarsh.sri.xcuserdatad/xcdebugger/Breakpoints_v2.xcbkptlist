@@ -20,11 +20,11 @@
             ignoreCount = "0"
             continueAfterRunningActions = "No"
             filePath = "MyStore/HomePageViewController.m"
-            timestampString = "558857544.87637"
+            timestampString = "558863162.306462"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "114"
-            endingLineNumber = "114"
+            startingLineNumber = "113"
+            endingLineNumber = "113"
             landmarkName = "-fetchNewsFromAPI"
             landmarkType = "7">
          </BreakpointContent>

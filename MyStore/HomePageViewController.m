@@ -21,7 +21,6 @@
 @property (weak, nonatomic) IBOutlet NewsTableView *newsTableView;
 @property (weak, nonatomic) IBOutlet UIScrollView *catagoryScrollView;
 @property (nonatomic) NSURL *apiURL;
-@property (atomic) BOOL networkPresent;
 
 @end
 
@@ -31,22 +30,18 @@
     [super viewDidLoad];
     _newsTableView.rowHeight = 70;
     self.apiURL = [NSURL URLWithString:@"https://newsapi.org/v2/top-headlines?country=in&apiKey=e12b38aab6f546b78700191506122030"];
-    [self moniterNetworkPresenceAndFetchNews];
+    [self moniterNetworkPresence];
+    [self fetchNews];
 }
 
-- (void) moniterNetworkPresenceAndFetchNews {
-    [[AFNetworkReachabilityManager sharedManager] startMonitoring];
-    [[AFNetworkReachabilityManager sharedManager] setReachabilityStatusChangeBlock:^(AFNetworkReachabilityStatus status){
-        if (status == AFNetworkReachabilityStatusNotReachable) {
-            NSLog(@"Internet not found");
-            [self displayNoNetworkToast];
-            self.networkPresent = NO;
-        } else {
-            NSLog(@"Internet found");
-            self.networkPresent = YES;
-        }
+- (void) moniterNetworkPresence {
+    NSLog(@"Started monitering");
+    AFNetworkReachabilityManager *manager = [AFNetworkReachabilityManager sharedManager];
+    [manager setReachabilityStatusChangeBlock:^(AFNetworkReachabilityStatus status) {
+        NSLog(@"Reachability: %@", AFStringFromNetworkReachabilityStatus(status));
         [self fetchNews];
     }];
+    [manager startMonitoring];
 }
 
 - (IBAction)searchAction:(UIButton *)sender {
@@ -57,6 +52,12 @@
         self.apiURL = [NSURL URLWithString: [NSString stringWithFormat:@"https://newsapi.org/v2/everything?q=%@&sortBy=publishedAt&sources=the-hindu&apiKey=e12b38aab6f546b78700191506122030",query]];
         [self fetchNews];
     }
+}
+
+- (BOOL) getCurrentState {
+    BOOL networkState = [AFNetworkReachabilityManager sharedManager].reachable;
+    NSLog(@"lala %d",networkState);
+    return networkState;
 }
 
 - (IBAction)selectCatagory:(UIButton *)sender {
@@ -92,7 +93,7 @@
 }
 
 - (void) fetchNews {
-    if (!self.networkPresent) {
+    if (![self getCurrentState]) {
         NSLog(@"Internet not found");
         [self fetchNewsFromCoreData];
     } else {
@@ -109,7 +110,6 @@
         NSLog(@"Fetch successful");
         NewsSuccessModel *successJsonModel = [MTLJSONAdapter modelOfClass:[NewsSuccessModel class] fromJSONDictionary:jsonDictionaryForNews error:nil];
         self.newsTableView.newsArray = successJsonModel.articles;
-        NSLog(@"%@", successJsonModel.articles);
         [self deleteOldNewsFromCoreData];
         [self saveIntoCoreData: successJsonModel.articles];
     } else {
@@ -172,7 +172,7 @@
     }
     NSError *error = nil;
     if (![managedObjectContext save:&error])
-        NSLog(@"Cant save");
+        NSLog(@"Cant delete old data");
 }
 
 - (void) saveIntoCoreData:(NSArray *)articleArray {

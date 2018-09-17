@@ -10,6 +10,7 @@
 #import <SDWebImage/UIImageView+WebCache.h>
 #import <UIImageView+WebCache.h>
 #import "NewsTableViewCell.h"
+#import "NewsArticleModel.h"
 
 @implementation NewsTableView
 
@@ -35,14 +36,14 @@
 - (NewsTableViewCell *)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)indexPath {
     static NSString *CellIdentifier = @"newsCell";
     NewsTableViewCell *cell = [tableView dequeueReusableCellWithIdentifier:CellIdentifier forIndexPath:indexPath];
-    NSDictionary *newsItem = self.newsArray[indexPath.row];
+    NewsArticleModel *newsItem = self.newsArray[indexPath.row];
     
-    cell.newsTitle.text = [NSString stringWithFormat:@"%@",newsItem[@"title"]];
+    cell.newsTitle.text = [NSString stringWithFormat:@"%@",newsItem.title];
     cell.newsTitle.font = [UIFont fontWithName:@"Arial" size:15];
-    cell.publishedDate.text = [self getPublishedDateInCorrectFormat: [NSString stringWithFormat:@"%@",newsItem[@"publishedAt"]]];
+    cell.publishedDate.text = [self getPublishedDateInCorrectFormat: [NSString stringWithFormat:@"%@",newsItem.publishedAt]];
     cell.publishedDate.font = [UIFont fontWithName:@"Arial" size:12];
     
-    NSURL *imageURL = [NSURL URLWithString: [NSString stringWithFormat:@"%@",newsItem[@"urlToImage"]]];
+    NSURL *imageURL = [NSURL URLWithString: [NSString stringWithFormat:@"%@",newsItem.urlToImage]];
     [cell.newsImage sd_setImageWithURL: imageURL placeholderImage: [UIImage imageNamed:@"no_image"]];
     
     return cell;

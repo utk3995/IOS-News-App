@@ -7,6 +7,7 @@
 //
 
 #import "NewsSuccessModel.h"
+#import "NewsArticleModel.h"
 
 @implementation NewsSuccessModel
 
@@ -16,6 +17,10 @@
              @"totalResults" : @"totalResults",
              @"articles" : @"articles"
              };
+}
+
++ (NSValueTransformer *)articlesJSONTransformer {
+    return [NSValueTransformer mtl_JSONArrayTransformerWithModelClass:[NewsArticleModel class]];
 }
 
 @end

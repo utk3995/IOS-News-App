@@ -13,6 +13,8 @@
 #import "NewsTableView.h"
 #import <AFNetworkReachabilityManager.h>
 #import <CoreData/CoreData.h>
+#import "News.h"
+#import "NewsArticleModel.h"
 
 @interface HomePageViewController ()
 @property (weak, nonatomic) IBOutlet UITextField *searchField;
@@ -35,7 +37,7 @@
 - (void) moniterNetworkPresenceAndFetchNews {
     [[AFNetworkReachabilityManager sharedManager] startMonitoring];
     [[AFNetworkReachabilityManager sharedManager] setReachabilityStatusChangeBlock:^(AFNetworkReachabilityStatus status){
-        if (![[AFNetworkReachabilityManager sharedManager] isReachable]) {
+        if (status == AFNetworkReachabilityStatusNotReachable) {
             NSLog(@"Internet not found");
             [self displayNoNetworkToast];
             self.networkPresent = NO;
@@ -107,15 +109,22 @@
         NSLog(@"Fetch successful");
         NewsSuccessModel *successJsonModel = [MTLJSONAdapter modelOfClass:[NewsSuccessModel class] fromJSONDictionary:jsonDictionaryForNews error:nil];
         self.newsTableView.newsArray = successJsonModel.articles;
-        //[self saveIntoCoreData: successJsonModel.articles];
+        NSLog(@"%@", successJsonModel.articles);
+        [self deleteOldNewsFromCoreData];
+        [self saveIntoCoreData: successJsonModel.articles];
     } else {
         NSLog(@"Fetch Unsuccessful.");
     }
 }
 
 - (void) fetchNewsFromCoreData {
-    
+    NSManagedObjectContext *managedObjectContext = [self managedObjectContext];
+    NSFetchRequest *request = [[NSFetchRequest alloc] initWithEntityName:@"News"];
+    NSArray *storedNews = [managedObjectContext executeFetchRequest:request error:nil];
+    self.newsTableView.newsArray = storedNews;
 }
+
+
 
 - (BOOL) checkForSuccessInDictionary: (NSDictionary *) jsonDictionary {
     NewsStatusResponseModel *statusJsonModel = [MTLJSONAdapter modelOfClass:[NewsStatusResponseModel class] fromJSONDictionary:jsonDictionary error:nil];
@@ -134,7 +143,9 @@
         if (indexPath) {
             if ([segue.identifier isEqualToString:@"Display News"]) {
                 if ([segue.destinationViewController isKindOfClass:[WebViewController class]]) {
-                    NSString *url = self.newsTableView.newsArray[indexPath.row][@"url"];
+                    NewsArticleModel *nsm = self.newsTableView.newsArray[indexPath.row];
+                    NSString *url = nsm.url;
+                    NSLog(@"%@",url);
                     [self prepareWebViewController:segue.destinationViewController toDisplayURL:url];
                 }
             }
@@ -143,26 +154,40 @@
 }
 
 
-//- (NSManagedObjectContext *)managedObjectContext {
-//    NSManagedObjectContext *context = nil;
-//    id delegate = [[UIApplication sharedApplication] delegate];
-//    if ([delegate performSelector:@selector(managedObjectContext)]) {
-//        context = [delegate managedObjectContext];
-//    }
-//    return context;
-//}
+- (NSManagedObjectContext *)managedObjectContext {
+    NSManagedObjectContext *context = nil;
+    id delegate = [[UIApplication sharedApplication] delegate];
+    if ([delegate performSelector:@selector(managedObjectContext)]) {
+        context = [delegate managedObjectContext];
+    }
+    return context;
+}
 
-//- (void) saveIntoCoreData:(NSArray *)articleArray {
-//    NSManagedObjectContext *context = [self managedObjectContext];
-//
-//    NSManagedObject *data = [NSEntityDescription insertNewObjectForEntityForName:@"News" inManagedObjectContext:context];
-//    [data setValue:articleArray.description forKey:@"data"];
-//
-//    NSError *error = nil;
-//    // Save the object to persistent store
-//    if (![context save:&error]) {
-//        NSLog(@"Can't Save! %@ %@", error, [error localizedDescription]);
-//    }
-//}
+- (void) deleteOldNewsFromCoreData {
+    NSManagedObjectContext *managedObjectContext = [self managedObjectContext];
+    NSFetchRequest *request = [[NSFetchRequest alloc] initWithEntityName:@"News"];
+    NSArray *storedNews = [managedObjectContext executeFetchRequest:request error:nil];
+    for (News *nam in storedNews) {
+        [managedObjectContext deleteObject:nam];
+    }
+    NSError *error = nil;
+    if (![managedObjectContext save:&error])
+        NSLog(@"Cant save");
+}
+
+- (void) saveIntoCoreData:(NSArray *)articleArray {
+    NSManagedObjectContext *context = [self managedObjectContext];
+    
+    for (NewsArticleModel *nsm in articleArray) {
+        News *newsElement = [NSEntityDescription insertNewObjectForEntityForName:@"News" inManagedObjectContext:context];
+        newsElement.title = nsm.title;
+        newsElement.publishedAt = nsm.publishedAt;
+        newsElement.url = nsm.url;
+        newsElement.urlToImage = nil;
+        NSError *error = nil;
+        if (![context save:&error])
+            NSLog(@"Cant save");
+    }
+}
 
 @end
